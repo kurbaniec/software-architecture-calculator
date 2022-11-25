@@ -78,3 +78,17 @@ match (s:Service) return count(s)
 match (s:Service) delete s
 ```
 
+
+
+```
+match (s:Service {name: 'Reject_TUVOG'}) -- (o:Service)
+return s, o
+```
+
+```
+match (s:Service)-[:COMMON_CHANGES]-(OtherNodes)
+return s, OtherNodes
+```
+
+
+

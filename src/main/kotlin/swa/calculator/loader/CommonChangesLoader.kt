@@ -15,36 +15,39 @@ import java.io.File
  * @version 2022-11-25
  */
 @Component
-class ServiceNodeLoader(
+class CommonChangesLoader(
     private val db: Neo4jDb,
     @Value("\${db.insert.size}") private val batchSize: Int,
-    @Value("\${services.csv}") private val csvFilename: String
+    @Value("\${common.changes.csv}") private val csvFilename: String
 ) {
     companion object {
-        private val logger = LoggerFactory.getLogger(ServiceNodeLoader::class.java)
+        private val logger = LoggerFactory.getLogger(CommonChangesLoader::class.java)
     }
 
-    fun loadServiceNodes() {
+    fun loadCommonChangesRelation() {
         val file = csvFile()
-        readCsv(file, ::createServiceNodes)
+        readCsv(file, ::createCommonChangesRelation)
     }
 
-    private fun createServiceNodes(services: List<String>) {
-        val queryString = buildString {
-            append("CREATE ")
-            val iterator = services.iterator()
-            while(iterator.hasNext()) {
-                val service = iterator.next()
-                append("(n${service}:Service {name: '${service}'})")
-                if (iterator.hasNext()) append(",")
-                else append(";")
+    private fun createCommonChangesRelation(commonChanges: List<String>) {
+        val queries = mutableListOf<String>()
+        for (str in commonChanges) {
+            val queryString = buildString {
+                val (service1, service2, changes) = str.split(';', ignoreCase = false, limit = 3)
+                append("MATCH (a:Service),(b:Service) ")
+                append("WHERE a.name='${service1}' AND b.name='${service2}' " )
+                append("CREATE (a)-[r:COMMON_CHANGES {weight: $changes}]->(b); ")
             }
+            queries.add(queryString)
+
         }
         db.exec {tx ->
-            val query = Query(queryString)
-            // val result = tx.run(query)
-            // logger.info(result.toString())
-            tx.run(query)
+            for (queryString in queries) {
+                val query = Query(queryString)
+                // val result = tx.run(query)
+                // logger.info(result.toString())
+                tx.run(query)
+            }
         }
     }
 

@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
 import swa.calculator.db.Neo4jDb
+import swa.calculator.loader.CommonChangesLoader
 import swa.calculator.loader.ServiceNodeLoader
 
 /**
@@ -21,9 +22,12 @@ class Runner : CommandLineRunner {
 
     @Autowired
     private lateinit var nodeLoader: ServiceNodeLoader
+    @Autowired
+    private lateinit var commonChangesLoader: CommonChangesLoader
 
     override fun run(vararg args: String?) {
         logger.info("Hey")
         nodeLoader.loadServiceNodes()
+        commonChangesLoader.loadCommonChangesRelation()
     }
 }
