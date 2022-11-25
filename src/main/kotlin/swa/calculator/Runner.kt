@@ -4,6 +4,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
+import swa.calculator.db.Neo4jDb
+import swa.calculator.loader.ServiceNodeLoader
 
 /**
  *
@@ -18,10 +20,10 @@ class Runner : CommandLineRunner {
     }
 
     @Autowired
-    private lateinit var db: Neo4jTest
+    private lateinit var nodeLoader: ServiceNodeLoader
 
     override fun run(vararg args: String?) {
         logger.info("Hey")
-
+        nodeLoader.loadServiceNodes()
     }
 }
