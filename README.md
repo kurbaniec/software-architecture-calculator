@@ -92,3 +92,54 @@ return s, OtherNodes
 
 
 
+```
+CALL gds.graph.drop('commonChangesGraph', false) YIELD graphName;
+CALL gds.graph.project(
+    'commonChangesGraph',
+    'Service',
+    {
+        COMMON_CHANGES: {
+            orientation: 'UNDIRECTED'
+        }
+    },
+    {
+        relationshipProperties: 'weight'
+    }
+)
+```
+
+
+
+```
+CALL gds.alpha.leiden.stream('commonChangesGraph', { 
+	randomSeed: 19, 
+	relationshipWeightProperty: 'weight' 
+})
+YIELD nodeId, communityId
+RETURN gds.util.asNode(nodeId).name AS name, communityId
+ORDER BY name ASC
+```
+
+```
+CALL gds.alpha.leiden.stats('commonChangesGraph', { 
+	randomSeed: 19,
+	maxLevels: 20,
+	relationshipWeightProperty: 'weight'
+})
+YIELD communityCount
+```
+
+
+
+```
+CALL gds.louvain.stream('commonChangesGraph', { relationshipWeightProperty: 'weight' })
+YIELD nodeId, communityId, intermediateCommunityIds
+RETURN gds.util.asNode(nodeId).name AS name, communityId, intermediateCommunityIds
+ORDER BY name ASC
+```
+
+```
+CALL gds.louvain.stats('commonChangesGraph', { relationshipWeightProperty: 'weight' })
+YIELD communityCount
+```
+
