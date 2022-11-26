@@ -10,6 +10,7 @@ import swa.calculator.domain.Constants.CommonChangesRel
 import swa.calculator.domain.Constants.CommonChangesWeight
 import swa.calculator.domain.Constants.Service
 import java.io.File
+import kotlin.math.min
 
 /**
  *
@@ -52,11 +53,17 @@ class CommonChangesLoader(
     }
 
     private fun readCsv(file: File, lineFn: (lines: List<String>) -> Unit) {
+        var currentLine = 0
+        val lines = file.bufferedReader().lineSequence().count()
         val reader = file.inputStream().bufferedReader()
         reader.readLine()
         reader.useLines { r ->
             r.filter { it.isNotBlank() }
                 .chunked(batchSize, lineFn)
+                .map {
+                    currentLine = min(currentLine + batchSize, lines)
+                    logger.info("Progress $currentLine / $lines")
+                }
                 .count()
         }
     }

@@ -6,12 +6,11 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.util.ResourceUtils
 import swa.calculator.db.Neo4jDb
-import swa.calculator.domain.Constants.CommonChangesRel
-import swa.calculator.domain.Constants.CommonChangesWeight
 import swa.calculator.domain.Constants.PerformanceRel
 import swa.calculator.domain.Constants.PerformanceWeight
 import swa.calculator.domain.Constants.Service
 import java.io.File
+import kotlin.math.min
 
 /**
  *
@@ -54,11 +53,17 @@ class PerformanceLoader(
     }
 
     private fun readCsv(file: File, lineFn: (lines: List<String>) -> Unit) {
+        var currentLine = 0
+        val lines = file.bufferedReader().lineSequence().count()
         val reader = file.inputStream().bufferedReader()
         reader.readLine()
         reader.useLines { r ->
             r.filter { it.isNotBlank() }
                 .chunked(batchSize, lineFn)
+                .map {
+                    currentLine = min(currentLine + batchSize, lines)
+                    logger.info("Progress $currentLine / $lines")
+                }
                 .count()
         }
     }
