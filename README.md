@@ -12,7 +12,7 @@ docker run \
     -v $HOME/neo4j/import:/var/lib/neo4j/import \
     -v $HOME/neo4j/plugins:/plugins \
     --env NEO4J_AUTH=neo4j/test \
-    --env NEO4JLABS_PLUGINS='["graph-data-science"]' \
+    --env NEO4J_PLUGINS='["graph-data-science"]' \
     neo4j:latest
 ```
 
@@ -141,5 +141,51 @@ ORDER BY name ASC
 ```
 CALL gds.louvain.stats('commonChangesGraph', { relationshipWeightProperty: 'weight' })
 YIELD communityCount
+```
+
+
+
+```
+CALL gds.labelPropagation.stream('commonChangesGraph', { relationshipWeightProperty: 'weight' })
+YIELD nodeId, communityId AS Community
+RETURN gds.util.asNode(nodeId).name AS Name, Community
+ORDER BY Community, Name
+```
+
+```
+CALL gds.labelPropagation.stats('commonChangesGraph', { relationshipWeightProperty: 'weight' })
+YIELD communityCount
+```
+
+
+
+---
+
+
+
+```
+CALL gds.graph.drop('commonChangesGraph', false) YIELD graphName;
+CALL gds.graph.project(
+    'commonChangesGraph',
+    'Service',
+    {
+        COMMON_CHANGES: {
+            orientation: 'UNDIRECTED'
+        }
+    },
+    {
+        relationshipProperties: 'weight'
+    }
+)
+```
+
+
+
+```
+CALL gds.alpha.leiden.write('commonChangesGraph', { 
+	writeProperty: 'communityId',
+	relationshipWeightProperty: 'weight'
+})
+YIELD communityCount, nodePropertiesWritten
 ```
 
