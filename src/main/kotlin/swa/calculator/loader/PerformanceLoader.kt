@@ -8,6 +8,8 @@ import org.springframework.util.ResourceUtils
 import swa.calculator.db.Neo4jDb
 import swa.calculator.domain.Constants.CommonChangesRel
 import swa.calculator.domain.Constants.CommonChangesWeight
+import swa.calculator.domain.Constants.PerformanceRel
+import swa.calculator.domain.Constants.PerformanceWeight
 import swa.calculator.domain.Constants.Service
 import java.io.File
 
@@ -18,28 +20,28 @@ import java.io.File
  * @version 2022-11-25
  */
 @Component
-class CommonChangesLoader(
+class PerformanceLoader(
     private val db: Neo4jDb,
     @Value("\${db.insert.size}") private val batchSize: Int,
-    @Value("\${common.changes.csv}") private val csvFilename: String
+    @Value("\${performance.csv}") private val csvFilename: String
 ) {
     companion object {
-        private val logger = LoggerFactory.getLogger(CommonChangesLoader::class.java)
+        private val logger = LoggerFactory.getLogger(PerformanceLoader::class.java)
     }
 
-    fun loadCommonChangesRelations() {
+    fun loadCallerCalleeRelations() {
         val file = csvFile()
-        readCsv(file, ::createCommonChangesRelation)
+        readCsv(file, ::createCallerCalleeRelation)
     }
 
-    private fun createCommonChangesRelation(commonChanges: List<String>) {
+    private fun createCallerCalleeRelation(commonChanges: List<String>) {
         val queries = mutableListOf<String>()
         for (str in commonChanges) {
             val queryString = buildString {
-                val (service1, service2, changes) = str.split(';', ignoreCase = false, limit = 3)
+                val (service1, service2, numberOfCalls) = str.split(';', ignoreCase = false, limit = 3)
                 append("MATCH (a:$Service),(b:$Service) ")
                 append("WHERE a.name='${service1}' AND b.name='${service2}' " )
-                append("CREATE (a)-[r:$CommonChangesRel {$CommonChangesWeight: $changes}]->(b); ")
+                append("CREATE (a)-[r:$PerformanceRel {$PerformanceWeight: $numberOfCalls}]->(b); ")
             }
             queries.add(queryString)
         }

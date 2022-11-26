@@ -5,10 +5,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
-import swa.calculator.db.Neo4jDb
+import swa.calculator.loader.Clearer
 import swa.calculator.loader.CommonChangesLoader
+import swa.calculator.loader.PerformanceLoader
 import swa.calculator.loader.ServiceNodeLoader
-import swa.calculator.processor.ServiceClusterer
+import swa.calculator.processor.CommonChangesClusterer
+import swa.calculator.processor.PerformanceClusterer
 
 /**
  *
@@ -26,22 +28,33 @@ class Runner(
     }
 
     @Autowired
+    private lateinit var clearer: Clearer
+    @Autowired
     private lateinit var nodeLoader: ServiceNodeLoader
     @Autowired
-    private lateinit var commonChangesLoader: CommonChangesLoader
+    private lateinit var changesLoader: CommonChangesLoader
     @Autowired
-    private lateinit var clusterer: ServiceClusterer
+    private lateinit var performanceLoader: PerformanceLoader
+    @Autowired
+    private lateinit var changesClusterer: CommonChangesClusterer
+    @Autowired
+    private lateinit var performanceClusterer: PerformanceClusterer
 
     override fun run(vararg args: String?) {
         if (loadData) {
+            logger.info("Clearing Data ...")
+            clearer.clearData()
+            logger.info("Clearing Finished")
             logger.info("Loading Data ...")
             nodeLoader.loadServiceNodes()
-            commonChangesLoader.loadCommonChangesRelation()
+            changesLoader.loadCommonChangesRelations()
+            performanceLoader.loadCallerCalleeRelations()
             logger.info("Loading Finished")
         }
         if (processData) {
             logger.info("Processing Data ...")
-            clusterer.clusterServices()
+            changesClusterer.clusterServices()
+            performanceClusterer.clusterServices()
             logger.info("Processing Finished")
         }
     }
