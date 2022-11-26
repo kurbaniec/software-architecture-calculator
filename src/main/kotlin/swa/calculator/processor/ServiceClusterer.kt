@@ -20,25 +20,35 @@ import swa.calculator.domain.UnrelatedNode
 @Component
 class ServiceClusterer(
     private val db: Neo4jDb,
-    @Value("\${db.insert.size}") private val batchSize: Int,
     @Value("\${config.process.cluster.threshold}") private val threshold: Int,
-    @Value("\${config.process.cluster.new.relationship.weight}") private val newWeight: Int
+    @Value("\${config.process.cluster.new.relationship.weight}") private val newWeight: Int,
+    @Value("\${config.process.cluster.max.retries}") private val maxRetries: Int
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(ServiceClusterer::class.java)
     }
-    
-    fun clusterServices() {
-        dropAndCreateGraph()
-        val count = performWriteLeiden()
-        if (count > threshold) {
-            logger.warn("Got [$count] clusters, exceeding threshold [$threshold]")
-            logger.warn("Connecting smallest clusters together")
-            connectSmallestClusters()
-        }
 
+    fun clusterServices() {
+        var count: Int
+        var retries = 0
+        do {
+            dropAndCreateGraph()
+            count = performWriteLeiden()
+            if (count > threshold) {
+                logger.warn("Got [$count] clusters, exceeding threshold [$threshold]")
+                logger.warn("Connecting smallest clusters together")
+                connectSmallestClusters()
+                retries++
+            }
+        } while (count > threshold && retries < maxRetries)
+
+        if (retries < maxRetries) {
+            logger.info("Created graph with [$count] clusters")
+        } else {
+            logger.error("Could not cluster under threshold")
+        }
     }
-    
+
     private fun dropAndCreateGraph() {
         val dropQuery = "CALL gds.graph.drop('$CommonChangesGraph', false) YIELD graphName"
         db.exec { tx -> tx.run(dropQuery) }
@@ -58,7 +68,7 @@ class ServiceClusterer(
         """.trimIndent()
         db.exec { tx -> tx.run(createQuery) }
     }
-    
+
     private fun performWriteLeiden(): CommunityCount {
         val query = """
             CALL gds.alpha.leiden.write('$CommonChangesGraph', { 
@@ -77,11 +87,26 @@ class ServiceClusterer(
 
     private fun connectSmallestClusters() {
         val count = smallestClusterCount()
-        smallestClusterNodes(count)
+        val nodes = smallestClusterNodes(count)
+        createNewRelationships(nodes)
     }
 
     private fun createNewRelationships(nodes: List<UnrelatedNode>) {
-
+        val nodesPerCluster = nodes.filterOneNodePerCluster()
+        val nodePairs = nodesPerCluster.createNodePairs()
+        for ((a, b) in nodePairs) {
+            // println("new: $a = $b")
+            val query = """
+                MATCH (a:Service),(b:Service) 
+                WHERE a.name='${a.name}' AND b.name='${b.name}' 
+                CREATE 
+                    (a)-[r1:$CommonChangesRel {$CommonChangesWeight: $newWeight}]->(b),
+                    (b)-[r2:$CommonChangesRel {$CommonChangesWeight: $newWeight}]->(a)
+            """.trimIndent()
+            db.exec { tx ->
+                tx.run(query)
+            }
+        }
     }
 
     private fun smallestClusterNodes(count: MinCount): List<UnrelatedNode> {
@@ -92,17 +117,17 @@ class ServiceClusterer(
                 where count = $count
                 return id
             }
-            with id
-            match (s:Service)
-            where s.$CommonChangesClusterId in id
-            return s.name as name, s.$CommonChangesClusterId as clusterId
+            WITH id
+            MATCH (s:Service)
+            WHERE s.$CommonChangesClusterId in id
+            RETURN s.name as name, s.$CommonChangesClusterId as clusterId
         """.trimIndent()
         val nodes = mutableListOf<UnrelatedNode>()
         db.exec { tx ->
             val result = tx.run(query)
             while (result.hasNext()) {
                 val record = result.next()
-                val name = record["name"].toString()
+                val name = record["name"].toString().replace("\"", "")
                 val id = record["clusterId"].asInt()
                 nodes.add(UnrelatedNode(name, id))
             }
@@ -114,8 +139,8 @@ class ServiceClusterer(
     private fun smallestClusterCount(): MinCount {
         val query = """
             MATCH (s:$Service)
-            with s.$CommonChangesClusterId as id, count(s) as count 
-            return min(count) as min
+            WITH s.$CommonChangesClusterId as id, count(s) as count 
+            RETURN min(count) as min
         """.trimIndent()
         return db.exec { tx ->
             val result = tx.run(query)
@@ -123,7 +148,30 @@ class ServiceClusterer(
             record["min"].asInt()
         }
     }
-    
+
+    private fun List<UnrelatedNode>.filterOneNodePerCluster(): List<UnrelatedNode> {
+        val inspectedClusterIds = mutableListOf<Int>()
+        return this.filter { node ->
+            if (!inspectedClusterIds.contains(node.clusterId)) {
+                inspectedClusterIds.add(node.clusterId)
+                return@filter true
+            }
+            false
+        }
+
+    }
+
+    private fun List<UnrelatedNode>.createNodePairs(): List<Pair<UnrelatedNode, UnrelatedNode>> {
+        return this.chunked(2)
+            .map { input ->
+                if (input.count() == 1) {
+                    Pair(input.first(), this.random())
+                } else {
+                    Pair(input[0], input[1])
+                }
+            }
+    }
+
 }
 
 typealias CommunityCount = Int

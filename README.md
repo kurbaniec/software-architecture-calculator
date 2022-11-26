@@ -285,3 +285,52 @@ CALL gds.wcc.stats('commonChangesGraph', {
 YIELD componentCount
 ```
 
+
+
+
+
+---
+
+## Common Changes
+
+### Get Nodes
+
+```
+MATCH (s:Service)-[:COMMON_CHANGES]-(other)
+RETURN s, other
+LIMIT 180
+```
+
+Omit Certain Clusters
+
+```
+MATCH (s:Service)
+WHERE s.commonChangesClusterId != 51
+RETURN s
+LIMIT 250
+```
+
+### Get Specific Node
+
+```
+MATCH (s:Service)
+WHERE s.name ="Renew_ZOHOZ"
+RETURN s
+```
+
+### Get Nodes in Specic Clusters
+
+```
+MATCH (s:Service)
+WHERE s.commonChangesClusterId = 51
+RETURN s
+```
+
+### Get Cluster Sizes
+
+```
+MATCH (s:Service)
+WITH s.commonChangesClusterId as changesClusterId, count(s) as count
+RETURN changesClusterId, count
+ORDER BY count desc
+```
