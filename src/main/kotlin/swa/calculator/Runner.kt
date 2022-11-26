@@ -1,7 +1,6 @@
 package swa.calculator
 
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
@@ -11,6 +10,8 @@ import swa.calculator.loader.PerformanceLoader
 import swa.calculator.loader.ServiceNodeLoader
 import swa.calculator.processor.CommonChangesClusterer
 import swa.calculator.processor.PerformanceClusterer
+import swa.calculator.writer.CommonChangesWriter
+import swa.calculator.writer.PerformanceWriter
 
 /**
  *
@@ -20,25 +21,20 @@ import swa.calculator.processor.PerformanceClusterer
  */
 @Component
 class Runner(
+    private val clearer: Clearer,
+    private val nodeLoader: ServiceNodeLoader,
+    private val changesLoader: CommonChangesLoader,
+    private val performanceLoader: PerformanceLoader,
+    private val changesClusterer: CommonChangesClusterer,
+    private val performanceClusterer: PerformanceClusterer,
+    private val changesWriter: CommonChangesWriter,
+    private val performanceWriter: PerformanceWriter,
     @Value("\${config.load.data}") private val loadData: Boolean,
     @Value("\${config.process.data}") private val processData: Boolean,
 ) : CommandLineRunner {
     companion object {
         private val logger = LoggerFactory.getLogger(Runner::class.java)
     }
-
-    @Autowired
-    private lateinit var clearer: Clearer
-    @Autowired
-    private lateinit var nodeLoader: ServiceNodeLoader
-    @Autowired
-    private lateinit var changesLoader: CommonChangesLoader
-    @Autowired
-    private lateinit var performanceLoader: PerformanceLoader
-    @Autowired
-    private lateinit var changesClusterer: CommonChangesClusterer
-    @Autowired
-    private lateinit var performanceClusterer: PerformanceClusterer
 
     override fun run(vararg args: String?) {
         if (loadData) {
@@ -47,15 +43,19 @@ class Runner(
             logger.info("Clearing Finished")
             logger.info("Loading Data ...")
             nodeLoader.loadServiceNodes()
-            // changesLoader.loadCommonChangesRelations()
+            changesLoader.loadCommonChangesRelations()
             performanceLoader.loadCallerCalleeRelations()
             logger.info("Loading Finished")
         }
         if (processData) {
             logger.info("Processing Data ...")
-            // changesClusterer.clusterServices()
+            changesClusterer.clusterServices()
             performanceClusterer.clusterServices()
             logger.info("Processing Finished")
+            logger.info("Persisting System Architecture ...")
+            changesWriter.persistArchitecture()
+            performanceWriter.persistArchitecture()
+            logger.info("Persisting Finished")
         }
     }
 }

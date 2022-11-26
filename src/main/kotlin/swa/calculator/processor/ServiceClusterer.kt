@@ -3,7 +3,7 @@ package swa.calculator.processor
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import swa.calculator.db.Neo4jDb
-import swa.calculator.domain.UnrelatedNode
+import swa.calculator.domain.Node
 import java.util.*
 import kotlin.math.ceil
 
@@ -98,7 +98,7 @@ class ServiceClusterer(
         createNewRelationships(nodes)
     }
 
-    private fun createNewRelationships(nodes: List<UnrelatedNode>) {
+    private fun createNewRelationships(nodes: List<Node>) {
         val nodesPerCluster = nodes.filterOneNodePerCluster()
         val nodePairs = nodesPerCluster.createNodePairs()
         for ((a, b) in nodePairs) {
@@ -116,7 +116,7 @@ class ServiceClusterer(
         }
     }
 
-    private fun smallestClusterNodes(count: MinCount): List<UnrelatedNode> {
+    private fun smallestClusterNodes(count: MinCount): List<Node> {
         val query = """
             CALL {
             	MATCH (s:Service)
@@ -129,17 +129,17 @@ class ServiceClusterer(
             WHERE s.${cfg.cluster} in id
             RETURN s.name as name, s.${cfg.cluster} as clusterId
         """.trimIndent()
-        val nodes = mutableListOf<UnrelatedNode>()
+        val nodes = mutableListOf<Node>()
         db.exec { tx ->
             val result = tx.run(query)
             while (result.hasNext()) {
                 val record = result.next()
                 val name = record["name"].toString().replace("\"", "")
                 val id = record["clusterId"].asInt()
-                nodes.add(UnrelatedNode(name, id))
+                nodes.add(Node(name, id))
             }
         }
-        logger.info(nodes.count().toString())
+        // logger.info(nodes.count().toString())
         return nodes
     }
 
@@ -180,17 +180,10 @@ class ServiceClusterer(
                 minCount *= 1.25
             }
         } while (nodeCount < cfg.minGroupCount)
-//        val minCountGroupCountQuery = """
-//            MATCH (s:Service)
-//            WITH s.${cfg.cluster} as id, count(s) as count
-//            where count <= $minCount
-//            return count(id) as groupCount
-//        """.trimIndent()
         return ceil(minCount).toInt()
-
     }
 
-    private fun List<UnrelatedNode>.filterOneNodePerCluster(): List<UnrelatedNode> {
+    private fun List<Node>.filterOneNodePerCluster(): List<Node> {
         val inspectedClusterIds = mutableListOf<Int>()
         return this.filter { node ->
             if (!inspectedClusterIds.contains(node.clusterId)) {
@@ -202,7 +195,7 @@ class ServiceClusterer(
 
     }
 
-    private fun List<UnrelatedNode>.createNodePairs(): List<Pair<UnrelatedNode, UnrelatedNode>> {
+    private fun List<Node>.createNodePairs(): List<Pair<Node, Node>> {
         return this.chunked(2)
             .map { input ->
                 if (input.count() == 1) {
