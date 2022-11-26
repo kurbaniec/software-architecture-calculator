@@ -29,7 +29,11 @@ class ServiceClusterer(
     fun clusterServices() {
         dropAndCreateGraph()
         val count = performWriteLeiden()
-        logger.info("Got $count clusters")
+        if (count > threshold) {
+            logger.warn("Got [$count] clusters, exceeding threshold [$threshold]")
+            logger.warn("Connecting smallest clusters together")
+        }
+
     }
     
     private fun dropAndCreateGraph() {
@@ -67,7 +71,16 @@ class ServiceClusterer(
             record["communityCount"].asInt()
         }
     }
+
+    private fun connectSmallestClusters() {
+
+    }
+
+    private fun smallestClusterCount(): Int {
+        return 0
+    }
     
 }
 
 typealias CommunityCount = Int
+typealias MinCount = Int

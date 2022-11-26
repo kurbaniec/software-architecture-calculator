@@ -189,3 +189,99 @@ CALL gds.alpha.leiden.write('commonChangesGraph', {
 YIELD communityCount, nodePropertiesWritten
 ```
 
+
+
+```
+match (s:Service)
+with s.commonChangeClusterId as id, count(s) as count
+return id, min(count)
+```
+
+```
+match (s:Service)-[r]-(other) 
+where s.commonChangeClusterId = 266
+return s, other
+```
+
+```
+match (s:Service)
+where s.commonChangeClusterId = 4
+return s
+```
+
+```
+match (s:Service)
+with s.commonChangeClusterId as id, count(s) as count 
+where count = 1
+return id, count
+```
+
+```
+match (s:Service)
+with s.commonChangeClusterId as id, count(s) as count 
+where count = 1
+return id, count
+```
+
+
+
+Min
+
+```
+match (s:Service)
+with s.commonChangeClusterId as id, count(s) as count 
+return min(count) as min
+```
+
+All Groups
+
+```
+match (s:Service)
+with s.commonChangeClusterId as id, count(s) as count 
+return min(count) as min
+```
+
+All Nodes
+
+```
+CALL {
+	match (s:Service)
+    with s.commonChangeClusterId as id, count(s) as count
+    where count = 1
+    return id
+}
+with id
+match (s:Service)
+where s.commonChangeClusterId in id
+return s as nodes
+
+```
+
+
+
+---
+
+```
+match (s:Service)
+with s.commonChangeClusterId as id, count(s) as count
+return id, min(count)
+```
+
+
+
+```
+match (s:Service)-[r]-(other)
+where s.name = 'Assign_RAVEZ'
+return s, other
+```
+
+
+
+```
+CALL gds.wcc.stats('commonChangesGraph', {
+	relationshipWeightProperty: 'weight',
+  	threshold: 0.0
+})
+YIELD componentCount
+```
+
