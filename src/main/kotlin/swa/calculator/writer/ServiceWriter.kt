@@ -29,6 +29,7 @@ class ServiceWriter(
         val label: String,
         val cluster: String,
     )
+
     private lateinit var cfg: ServiceWriterProperties
 
     fun writeServices(config: ServiceWriterProperties) {
@@ -39,11 +40,9 @@ class ServiceWriter(
 
     private fun writeNodes(nodes: List<Node>) {
         val groupedNodes = nodes.groupBy { it.clusterId }
-        val simpleDate = SimpleDateFormat("dd-MM-yyyy.hh-mm-ss")
-        val currentDate = simpleDate.format(Date())
-        val dir = File(cfg.path, "calculator.$currentDate")
+        val dir = File(cfg.path, "calculator.${currentDate()}")
         dir.mkdirs()
-        val file = File(dir, "${cfg.fileName}.cluster.json")
+        val file = File(dir, "${cfg.fileName}.${currentTime()}.cluster.json")
         file.printWriter().use { out ->
             writeSystem(out, groupedNodes)
         }
@@ -93,5 +92,15 @@ class ServiceWriter(
             }
         }
         return nodes
+    }
+
+    private fun currentDate(): String {
+        val simpleDate = SimpleDateFormat("dd-MM-yyyy")
+        return simpleDate.format(Date())
+    }
+
+    private fun currentTime(): String {
+        val simpleDate = SimpleDateFormat("HH-mm-ss")
+        return simpleDate.format(Date())
     }
 }
