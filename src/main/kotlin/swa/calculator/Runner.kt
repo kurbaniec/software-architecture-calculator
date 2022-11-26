@@ -47,13 +47,13 @@ class Runner(
             logger.info("Clearing Finished")
             logger.info("Loading Data ...")
             nodeLoader.loadServiceNodes()
-            changesLoader.loadCommonChangesRelations()
+            // changesLoader.loadCommonChangesRelations()
             performanceLoader.loadCallerCalleeRelations()
             logger.info("Loading Finished")
         }
         if (processData) {
             logger.info("Processing Data ...")
-            changesClusterer.clusterServices()
+            // changesClusterer.clusterServices()
             performanceClusterer.clusterServices()
             logger.info("Processing Finished")
         }

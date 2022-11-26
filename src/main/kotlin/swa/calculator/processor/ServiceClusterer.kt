@@ -4,6 +4,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import swa.calculator.db.Neo4jDb
 import swa.calculator.domain.UnrelatedNode
+import java.util.*
+import kotlin.math.ceil
 
 /**
  *
@@ -27,7 +29,8 @@ class ServiceClusterer(
         val weight: String,
         val newWeight: Int,
         val threshold: Int,
-        val maxRetries: Int
+        val maxRetries: Int,
+        val minGroupCount: Int
     )
     private lateinit var cfg: ServiceClusterProperties
 
@@ -118,7 +121,7 @@ class ServiceClusterer(
             CALL {
             	MATCH (s:Service)
                 WITH s.${cfg.cluster} as id, count(s) as count
-                where count = $count
+                where count <= $count
                 return id
             }
             WITH id
@@ -141,16 +144,50 @@ class ServiceClusterer(
     }
 
     private fun smallestClusterCount(): MinCount {
-        val query = """
+        val minCountQuery = """
             MATCH (s:${cfg.label})
             WITH s.${cfg.cluster} as id, count(s) as count 
             RETURN min(count) as min
         """.trimIndent()
-        return db.exec { tx ->
-            val result = tx.run(query)
+        var minCount = db.exec { tx ->
+            val result = tx.run(minCountQuery)
             val record = result.next()
-            record["min"].asInt()
+            record["min"].asDouble()
         }
+        // Check if more than configured nodes were found
+        // If there are only two nodes and if there in the same group
+        // the algorithm would stuck in place as the smallestClusterCount method
+        // would always return the same minCount
+        do {
+            val nodeCountQuery = """
+            CALL {
+                MATCH (s:Service)
+                WITH s.${cfg.cluster} as id, count(s) as count
+                where count <= ${"%.2f".format(Locale.ENGLISH, minCount)}
+                return id
+            }
+            WITH id
+            MATCH (s:Service)
+            WHERE s.${cfg.cluster} in id
+            RETURN count(s) as nodeCount
+        """.trimIndent()
+            val nodeCount = db.exec { tx ->
+                val result = tx.run(nodeCountQuery)
+                val record = result.next()
+                record["nodeCount"].asInt()
+            }
+            if (nodeCount < cfg.minGroupCount) {
+                minCount *= 1.25
+            }
+        } while (nodeCount < cfg.minGroupCount)
+//        val minCountGroupCountQuery = """
+//            MATCH (s:Service)
+//            WITH s.${cfg.cluster} as id, count(s) as count
+//            where count <= $minCount
+//            return count(id) as groupCount
+//        """.trimIndent()
+        return ceil(minCount).toInt()
+
     }
 
     private fun List<UnrelatedNode>.filterOneNodePerCluster(): List<UnrelatedNode> {

@@ -20,7 +20,8 @@ class CommonChangesClusterer(
     private val clusterer: ServiceClusterer,
     @Value("\${config.process.cluster.threshold}") private val threshold: Int,
     @Value("\${config.process.cluster.new.relationship.weight}") private val newWeight: Int,
-    @Value("\${config.process.cluster.max.retries}") private val maxRetries: Int
+    @Value("\${config.process.cluster.max.retries}") private val maxRetries: Int,
+    @Value("\${config.process.cluster.min.group.count}") private val minGroupCount: Int
 ) {
     companion object {
         val logger = LoggerFactory.getLogger(CommonChangesClusterer::class.java)
@@ -36,7 +37,8 @@ class CommonChangesClusterer(
             weight = CommonChangesWeight,
             newWeight = newWeight,
             threshold = threshold,
-            maxRetries = maxRetries
+            maxRetries = maxRetries,
+            minGroupCount = minGroupCount
         )
         clusterer.clusterServices(config)
     }

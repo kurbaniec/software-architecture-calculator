@@ -287,6 +287,54 @@ YIELD componentCount
 
 
 
+possible smallest cluster algorithm...
+
+```
+CALL {
+	match (s:Service)
+	with s.performanceId as id, count(s) as count
+	return min(count) as min1
+}
+with min1
+call {
+	match (s:Service)
+	with s.performanceId as id, count(s) as count
+	where count > min1
+	return min(count) as min2
+}
+with min2
+call {
+	match (s:Service)
+	with s.performanceId as id, count(s) as count
+	where count > min2
+	return min(count) as min3
+}
+with min3
+match (s:Service)
+with s.performanceId as id, count(s) as count
+where count > min3
+return min(count) as min
+
+
+```
+
+
+
+
+
+```
+CALL {
+    MATCH (s:Service)
+    WITH s.${cfg.cluster} as id, count(s) as count
+    where count <= $count
+    return id
+}
+WITH id
+MATCH (s:Service)
+WHERE s.${cfg.cluster} in id
+RETURN count(s) as nodeCount
+```
+
 
 
 ---
@@ -334,3 +382,38 @@ WITH s.commonChangesClusterId as changesClusterId, count(s) as count
 RETURN changesClusterId, count
 ORDER BY count desc
 ```
+
+## Performance
+
+### Get Nodes
+
+```
+MATCH (s:Service)-[:CALLS]-(other)
+RETURN s, other
+```
+
+### Get Specific Node
+
+```
+MATCH (s:Service)-[:CALLS]-(other)
+WHERE s.name ="Delete_CAFOR"
+RETURN s, other
+```
+
+### Get Nodes in Specic Clusters
+
+```
+MATCH (s:Service)
+WHERE s.performanceId = 3
+RETURN s
+```
+
+### Get Cluster Sizes
+
+```
+MATCH (s:Service)
+WITH s.performanceId as performanceId, count(s) as count
+RETURN performanceId, count
+ORDER BY count desc
+```
+
