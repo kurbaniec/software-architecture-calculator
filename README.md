@@ -1,6 +1,10 @@
+<div align="center">
+  <h1><ins>Software Architecture Calculator
+</ins></h1>
+</div>
+## 🚀 Run 
 
-
-
+### Neo4j DB
 
 ```bash
 docker run \
@@ -16,7 +20,125 @@ docker run \
     neo4j:latest
 ```
 
+DB-Browser can be accessed via http://localhost:7474/browser/.
 
+### Application
+
+```bash
+./gradlew bootRun
+```
+
+Results are written to `./build/resources/main/`.
+
+## ✨ Approach
+
+1. Cluster services into sub-system via `Leiden` algorithm
+2. If optimal cluster size exceeds threshold:
+   * Connect clusters with the least number of services (randomly) together
+   * Repeat from 1.
+
+### Visualization for Step 2.
+
+<img src=".img/image-20221128215139180.png" alt="image-20221128215139180" style="zoom: 25%;" />
+
+<img src=".img/image-20221128215459327.png" alt="image-20221128215459327" style="zoom:25%;" />
+
+<img src=".img/image-20221128215518834.png" alt="image-20221128215518834" style="zoom:25%;" />
+
+
+
+## Acknowledges
+
+* https://neo4j.com/developer/docker-run-neo4j/
+* https://neo4j.com/developer/java/
+* https://neo4j.com/docs/graph-data-science/current/algorithms/community/
+* https://neo4j.com/docs/graph-data-science/2.2/algorithms/alpha/leiden/
+
+## Common Changes
+
+### Get Nodes
+
+```
+MATCH (s:Service)-[:COMMON_CHANGES]-(other)
+RETURN s, other
+LIMIT 180
+```
+
+Omit Certain Clusters
+
+```
+MATCH (s:Service)
+WHERE s.commonChangesClusterId != 51
+RETURN s
+LIMIT 250
+```
+
+### Get Specific Node
+
+```
+MATCH (s:Service)
+WHERE s.name ="Renew_ZOHOZ"
+RETURN s
+```
+
+### Get Nodes in Specic Clusters
+
+```
+MATCH (s:Service)
+WHERE s.commonChangesClusterId = 51
+RETURN s
+```
+
+### Get Cluster Sizes
+
+```
+MATCH (s:Service)
+WITH s.commonChangesClusterId as changesClusterId, count(s) as count
+RETURN changesClusterId, count
+ORDER BY count desc
+```
+
+## Performance
+
+### Get Nodes
+
+```
+MATCH (s:Service)-[:CALLS]-(other)
+RETURN s, other
+```
+
+### Get Specific Node
+
+```
+MATCH (s:Service)-[:CALLS]-(other)
+WHERE s.name ="Delete_CAFOR"
+RETURN s, other
+```
+
+### Get Nodes in Specic Clusters
+
+```
+MATCH (s:Service)
+WHERE s.performanceId = 3
+RETURN s
+```
+
+### Get Cluster Sizes
+
+```
+MATCH (s:Service)
+WITH s.performanceId as performanceId, count(s) as count
+RETURN performanceId, count
+ORDER BY count desc
+```
+
+
+
+
+
+---
+
+## Random Notes
 
 ```
 CREATE
@@ -338,82 +460,4 @@ RETURN count(s) as nodeCount
 
 
 ---
-
-## Common Changes
-
-### Get Nodes
-
-```
-MATCH (s:Service)-[:COMMON_CHANGES]-(other)
-RETURN s, other
-LIMIT 180
-```
-
-Omit Certain Clusters
-
-```
-MATCH (s:Service)
-WHERE s.commonChangesClusterId != 51
-RETURN s
-LIMIT 250
-```
-
-### Get Specific Node
-
-```
-MATCH (s:Service)
-WHERE s.name ="Renew_ZOHOZ"
-RETURN s
-```
-
-### Get Nodes in Specic Clusters
-
-```
-MATCH (s:Service)
-WHERE s.commonChangesClusterId = 51
-RETURN s
-```
-
-### Get Cluster Sizes
-
-```
-MATCH (s:Service)
-WITH s.commonChangesClusterId as changesClusterId, count(s) as count
-RETURN changesClusterId, count
-ORDER BY count desc
-```
-
-## Performance
-
-### Get Nodes
-
-```
-MATCH (s:Service)-[:CALLS]-(other)
-RETURN s, other
-```
-
-### Get Specific Node
-
-```
-MATCH (s:Service)-[:CALLS]-(other)
-WHERE s.name ="Delete_CAFOR"
-RETURN s, other
-```
-
-### Get Nodes in Specic Clusters
-
-```
-MATCH (s:Service)
-WHERE s.performanceId = 3
-RETURN s
-```
-
-### Get Cluster Sizes
-
-```
-MATCH (s:Service)
-WITH s.performanceId as performanceId, count(s) as count
-RETURN performanceId, count
-ORDER BY count desc
-```
 
